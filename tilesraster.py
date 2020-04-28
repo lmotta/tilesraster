@@ -4,9 +4,9 @@ import math, os, tempfile
 import collections
 
 from osgeo import gdal, ogr, osr
+from osgeo.gdalconst import GA_ReadOnly
 gdal.AllRegister()
 gdal.UseExceptions()
-from osgeo.gdalconst import GA_ReadOnly
 
 class TilesRaster():
     SRS_WGS84 = '+proj=longlat +datum=WGS84 +no_defs'
@@ -35,8 +35,7 @@ class TilesRaster():
 
     def __init__(self, filepath, formatImage):
         def hasGeorefence():
-            xMin, xRes, xRotation, yMax, yRotation, yRes = self.ds.GetGeoTransform()
-            if ( xMin, xRes, xRotation, yMax, yRotation, yRes ) == ( 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 ):
+            if ( 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 ) == self.ds.GetGeoTransform():
                 self._message = 'Image missing georeference(geotransform)'
                 self._statusError = 1
                 return False
@@ -59,14 +58,13 @@ class TilesRaster():
                 geom.TransformTo( self.srsTile )
             except RuntimeError as e:
                 self._message = f"Transform - {str(e)}"
-                self._statusError = 2
+                self._statusError = 1
                 return None
             return geom
 
         self.driverName = formatImage
         self._message = None
         self._statusError = 0 # 0(None), 1(image), 2(request/tile)
-        self.ds = gdal.Open( filepath, GA_ReadOnly )
         try:
             self.ds = gdal.Open( filepath, GA_ReadOnly )
         except RuntimeError as e:
@@ -109,8 +107,8 @@ class TilesRaster():
             vlat = math.degrees(lat_rad)
             return Point( vlong, vlat )
 
-        def getDatasourceTile(pointMin, pointMax):
-            def getDatasourceSubset(pointMin, pointMax):
+        def getDatasetTile(pointMin, pointMax):
+            def getDatasetSubset(pointMin, pointMax):
                 tolerance = 0.1
                 xBuffer = tolerance * ( pointMax.long - pointMin.long )
                 yBuffer = tolerance * ( pointMax.lat - pointMin.lat )
@@ -131,7 +129,7 @@ class TilesRaster():
                     ds = None
                 return ds
             
-            dsSubset = getDatasourceSubset( pointMin, pointMax )
+            dsSubset = getDatasetSubset( pointMin, pointMax )
             if dsSubset is None:
                 return None
             # Warp
@@ -162,7 +160,7 @@ class TilesRaster():
             self._message = f"Tile outside image"
             self._statusError = 2
             return False
-        ds = getDatasourceTile( pointMin, pointMax )
+        ds = getDatasetTile( pointMin, pointMax )
         if ds is None:
             return False
         _dsImage = gdal.GetDriverByName( self.driverName ).CreateCopy( filepath, ds )
@@ -170,7 +168,6 @@ class TilesRaster():
         aux_xml = "{}{}.aux.xml".format( *os.path.splitext( filepath) )
         if os.path.exists( aux_xml ):
             os.remove( aux_xml )
-
         self._statusError = 0
         return True
 

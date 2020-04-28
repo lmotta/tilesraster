@@ -7,7 +7,7 @@ from tilesraster import TilesRaster
 
 app = Flask(__name__)
 
-IMAGES_DIR = '/home/lmotta/data/db/images/landsat_232-063'
+IMAGES_DIR = '/home/lmotta/data/db/images/landsat'
 STATUS_HTTP_TILES_RASTER = {
     0: 200, # OK
     1: 500, # Internal Server Error
@@ -21,35 +21,39 @@ def getTilesRaster(image):
 def responseError(message, status):
     return Response( f"{message}\n", status, mimetype='text/plain' )
 
-def getResponseTilesRaster(tilesraster, z, x, y):
-    data = tilesraster.bytesTile( z, x, y )
-    if tileraster.status_error:
-        status = STATUS_HTTP_TILES_RASTER[ tilesraster.status_error ]
-        return responseError( tilesraster.message, status )
+def getResponseTilesRaster(itemCatalog, z, x, y):
+    if itemCatalog['tilesraster'] is None:
+        itemCatalog['tilesraster'] = getTilesRaster( itemCatalog['file'] )
+        # Check image error
+        if itemCatalog['tilesraster'].status_error:
+            status = STATUS_HTTP_TILES_RASTER[ itemCatalog['tilesraster'].status_error ]
+            return responseError( itemCatalog['tilesraster'].message, status )
+    # Check tile error
+    data = itemCatalog['tilesraster'].bytesTile( z, x, y )
+    if itemCatalog['tilesraster'].status_error:
+        status = STATUS_HTTP_TILES_RASTER[ itemCatalog['tilesraster'].status_error ]
+        return responseError( itemCatalog['tilesraster'].message, status )
     return Response( data, mimetype='image/png' )
 
-tileraster = getTilesRaster('LC82320632013239LGN00_r6g5b4.tif')
+catalogRaster = {
+    '15293': { 'file': 'LC82320682015293LGN00_r6g5b4.tif', 'tilesraster': None },
+    '13166': { 'file': 'LC82330682013166LGN00_r6g5b4.tif', 'tilesraster': None }
+}
 
 @app.route('/')
 def index():
-    return f"<h1>Need:/tile/<z>/<x>/<y> </h1>"
+    return responseError("Need Paths: .../tile/z/x/y OR .../tile/q", 400)
 
-@app.route("/tile/<z>/<x>/<y>")
-def tilezxy(z, x, y):
-    # Check Valid z, x, y
-    if tileraster.status_error:
-        status = STATUS_HTTP_TILES_RASTER[ tileraster.status_error ]
-        return responseError( tileraster.message, status )
-    return getResponseTilesRaster( tileraster, int(z), int(x), int(y) )
+@app.route("/tile/<k>/<z>/<x>/<y>")
+def tilezxy(k, z, x, y):
+    # Check Valid arguments
+    return getResponseTilesRaster( catalogRaster[ k ], int(z), int(x), int(y) )
 
-@app.route("/tile/<q>")
-def tileq(q):
-    # Check Valid q
-    if tileraster.status_error:
-        status = STATUS_HTTP_TILES_RASTER[ tileraster.status_error ]
-        return responseError( tileraster.message, status )
+@app.route("/tile/<k>/<q>")
+def tileq(k, q):
+    # Check Valid arguments
     z, x, y = TilesRaster.quadKey2tile( q  )
-    return getResponseTilesRaster( tileraster, z, x, y )
+    return getResponseTilesRaster( catalogRaster[ k ], z, x, y )
 
 
 if __name__ == '__main__':
