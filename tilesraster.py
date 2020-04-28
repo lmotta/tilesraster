@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import math, os, tempfile
-import collections
+import os, math, collections, functools, tempfile
 
 from osgeo import gdal, ogr, osr
 from osgeo.gdalconst import GA_ReadOnly
@@ -180,6 +179,7 @@ class TilesRaster():
     def saveTile(self, filepath, zoom, xtile, ytile):
         return self._createImage( filepath, zoom, xtile, ytile )
 
+    @functools.lru_cache
     def bytesTile(self, zoom, xtile, ytile):
         args = {
             'prefix': '', 'suffix': self.driverName,
