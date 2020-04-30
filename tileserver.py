@@ -14,16 +14,13 @@ STATUS_HTTP_TILES_RASTER = {
     2: 400  # Bad Request
 }
 
-def getTilesRaster(image):
-    filepath = os.path.join( IMAGES_DIR, image )
-    return TilesRaster( filepath, 'PNG')
-
 def responseError(message, status):
     return Response( f"{message}\n", status, mimetype='text/plain' )
 
 def getResponseTilesRaster(itemCatalog, z, x, y):
     if itemCatalog['tilesraster'] is None:
-        itemCatalog['tilesraster'] = getTilesRaster( itemCatalog['file'] )
+        filepath = os.path.join( IMAGES_DIR, itemCatalog['file'] )
+        itemCatalog['tilesraster'] = TilesRaster( filepath, 'PNG')
         # Check image error
         if itemCatalog['tilesraster'].status_error:
             status = STATUS_HTTP_TILES_RASTER[ itemCatalog['tilesraster'].status_error ]
@@ -42,7 +39,7 @@ catalogRaster = {
 
 @app.route('/')
 def index():
-    return responseError("Need Paths: .../tile/z/x/y OR .../tile/q", 400)
+    return responseError("Need Paths: .../tile/k/z/x/y OR .../tile/k/q", 400)
 
 @app.route("/tile/<k>/<z>/<x>/<y>")
 def tilezxy(k, z, x, y):

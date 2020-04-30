@@ -162,8 +162,8 @@ class TilesRaster():
         ds = getDatasetTile( pointMin, pointMax )
         if ds is None:
             return False
-        _dsImage = gdal.GetDriverByName( self.driverName ).CreateCopy( filepath, ds )
-        _dsImage, ds = 2 * [None]
+        _ds = gdal.GetDriverByName( self.driverName ).CreateCopy( filepath, ds )
+        _ds, ds = 2 * [None]
         aux_xml = "{}{}.aux.xml".format( *os.path.splitext( filepath) )
         if os.path.exists( aux_xml ):
             os.remove( aux_xml )
@@ -179,16 +179,22 @@ class TilesRaster():
     def saveTile(self, filepath, zoom, xtile, ytile):
         return self._createImage( filepath, zoom, xtile, ytile )
 
-    @functools.lru_cache
+    @functools.lru_cache(maxsize=1024)
     def bytesTile(self, zoom, xtile, ytile):
-        args = {
-            'prefix': '', 'suffix': self.driverName,
-            'mode': 'w+b', 'delete': True
-        }
-        temp = tempfile.NamedTemporaryFile( **args )
-        isOk = self._createImage( temp.name, zoom, xtile, ytile )
+        def getBytesFromTempfile():
+            # https://lists.osgeo.org/pipermail/gdal-dev/2016-August/045030.html
+            f = gdal.VSIFOpenL( tempfile, 'rb')
+            gdal.VSIFSeekL(f, 0, 2) # seek to end
+            size = gdal.VSIFTellL(f)
+            gdal.VSIFSeekL(f, 0, 0) # seek to beginning
+            data = gdal.VSIFReadL(1, size, f)
+            gdal.VSIFCloseL(f)
+            return data
+
+        tempfile = '/vsimem/temp'
+        isOk = self._createImage( tempfile, zoom, xtile, ytile )
         if not isOk:
             return None
-        with open( temp.name, 'rb' ) as f:
-            data = f.read()
+        data = getBytesFromTempfile()
+        gdal.Unlink( tempfile )
         return data
