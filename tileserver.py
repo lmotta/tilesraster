@@ -14,6 +14,11 @@ STATUS_HTTP_TILES_RASTER = {
     2: 400  # Bad Request
 }
 
+catalogRaster = {
+    '15293': { 'file': 'LC82320682015293LGN00_r6g5b4.tif', 'tilesraster': None },
+    '13166': { 'file': 'LC82330682013166LGN00_r6g5b4.tif', 'tilesraster': None }
+}
+
 def responseError(message, status):
     return Response( f"{message}\n", status, mimetype='text/plain' )
 
@@ -31,11 +36,6 @@ def getResponseTilesRaster(itemCatalog, z, x, y):
         status = STATUS_HTTP_TILES_RASTER[ itemCatalog['tilesraster'].status_error ]
         return responseError( itemCatalog['tilesraster'].message, status )
     return Response( data, mimetype='image/png' )
-
-catalogRaster = {
-    '15293': { 'file': 'LC82320682015293LGN00_r6g5b4.tif', 'tilesraster': None },
-    '13166': { 'file': 'LC82330682013166LGN00_r6g5b4.tif', 'tilesraster': None }
-}
 
 @app.route('/')
 def index():
