@@ -110,53 +110,6 @@ class TilesRaster():
             return Point( vlong, vlat )
 
         def getDatasetTile(pointMin, pointMax, geomTile):
-            def getPointMinMaxBuffer(ratio):
-                xBuffer = ratio * ( pointMax.long - pointMin.long )
-                yBuffer = ratio * ( pointMax.lat - pointMin.lat )
-                pMin = Point( pointMin.long - xBuffer, pointMin.lat - yBuffer )
-                pMax = Point( pointMax.long + xBuffer, pointMax.lat + yBuffer )
-                return pMin, pMax
-
-            def getDatasetResample():
-                widthPct = self.TILE_SIZE / self.ds.RasterXSize * 100
-                heightPct = self.TILE_SIZE / self.ds.RasterYSize * 100
-                args = {
-                    'destName': '',
-                    'format': 'mem',
-                    'srcDS': self.ds,
-                    'widthPct': widthPct, 'heightPct': heightPct
-                }
-                try:
-                    ds = gdal.Translate( **args )
-                except RuntimeError as e:
-                    self._message = f"Translate: {str(e)}"
-                    self._statusError = 1
-                    ds = None
-                return ds
-
-            def getDatasetSubset(pointMin, pointMax):
-                args = {
-                    'destName': '',
-                    'format': 'mem',
-                    'srcDS': self.ds,
-                    'projWin': [ pMin.long, pMax.lat, pMax.long, pMin.lat ],
-                    'projWinSRS': self.SRS_WGS84
-                }
-                try:
-                    ds = gdal.Translate( **args )
-                except RuntimeError as e:
-                    self._message = f"Translate: {str(e)}"
-                    self._statusError = 1
-                    ds = None
-                return ds
-            
-            # if self.bbox.Contains( geomTile ):
-            #     pMin, pMax = getPointMinMaxBuffer(0.1)
-            #     dsTile = getDatasetSubset( pMin, pMax )
-            # else:
-            #     dsTile = getDatasetResample()
-            # if dsTile is None:
-            #     return None
             # Warp
             args = {
                 'destNameOrDestDS': '',
