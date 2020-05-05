@@ -163,12 +163,17 @@ class TilesRaster():
     def bytesTile(self, zoom, xtile, ytile):
         def getBytesFromTempfile():
             # https://lists.osgeo.org/pipermail/gdal-dev/2016-August/045030.html
-            f = gdal.VSIFOpenL( memfile, 'rb')
-            gdal.VSIFSeekL(f, 0, 2) # seek to end
-            size = gdal.VSIFTellL(f)
-            gdal.VSIFSeekL(f, 0, 0) # seek to beginning
-            data = gdal.VSIFReadL(1, size, f)
-            gdal.VSIFCloseL(f)
+            try:
+                f = gdal.VSIFOpenL( memfile, 'rb')
+                gdal.VSIFSeekL(f, 0, 2) # seek to end
+                size = gdal.VSIFTellL(f)
+                gdal.VSIFSeekL(f, 0, 0) # seek to beginning
+                data = gdal.VSIFReadL(1, size, f)
+                gdal.VSIFCloseL(f)
+            except RuntimeError as e:
+                self._message = f"Load memfile - {str(e)}"
+                self._statusError = 1
+                data = None
             return data
 
         memfile = '/vsimem/temp'
