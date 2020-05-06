@@ -1,0 +1,2 @@
+conda activate app
+uwsgi --ini uwsgi.ini

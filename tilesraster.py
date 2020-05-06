@@ -2,7 +2,7 @@
 
 import os, math, collections, functools
 
-from osgeo import gdal, ogr, osr
+from osgeo import gdal, osr
 from osgeo.gdalconst import GA_ReadOnly
 gdal.AllRegister()
 gdal.UseExceptions()
@@ -35,68 +35,60 @@ class TilesRaster():
 
     def __init__(self, filepath, formatImage):
         def hasGeorefence():
-            if ( 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 ) == self.ds.GetGeoTransform():
+            if ( 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 ) == self._ds.GetGeoTransform():
                 self._message = 'Image missing georeference(geotransform)'
                 self._statusError = 1
                 return False
-            srs = self.ds.GetProjectionRef()
+            srs = self._ds.GetProjectionRef()
             if not bool( srs ):
                 self._message = 'Image missing georeference(projectionref)'
                 self._statusError = 1
                 return False
             return True
 
-        def getBBox():
-            xMin, xRes, xRotation, yMax, yRotation, yRes = self.ds.GetGeoTransform()
-            xSize, ySize = self.ds.RasterXSize, self.ds.RasterYSize
-            xMax = xMin + xRes * xSize + ySize * xRotation
-            yMin = yMax + yRes * ySize + xSize * yRotation # yRes Negative
-            # Geom
-            geom = self._createGeometry( xMin, yMin, xMax, yMax )
-            geom.AssignSpatialReference( self.srsImage )
-            try:
-                geom.TransformTo( self.srsTile )
-            except RuntimeError as e:
-                self._message = f"Transform - {str(e)}"
-                self._statusError = 1
-                return None
-            return geom
+        def getMinMaxPoint():
+            xMin, xRes, _xRotation, yMax, _yRotation, yRes = self._ds.GetGeoTransform()
+            xSize, ySize = self._ds.RasterXSize, self._ds.RasterYSize
+            xMax = xMin + xRes * xSize
+            yMin = yMax + yRes * ySize # yRes Negative
+            #
+            srsImage = osr.SpatialReference( self._ds.GetProjectionRef() )
+            srsTile = osr.SpatialReference()
+            srsTile.ImportFromProj4( self.SRS_WGS84 )
+            if not srsImage.IsSame( srsTile ):
+                ct = osr.CoordinateTransformation( srsImage, srsTile )
+                try:
+                    ( xMin, yMin, _z ) = ct.TransformPoint( xMin, yMin )
+                    ( xMax, yMax, _z ) = ct.TransformPoint( xMax, yMax )
+                except RuntimeError as e:
+                    self._message = f"Transform - {str(e)}"
+                    self._statusError = 1
+                    return None
+            Point = collections.namedtuple('Point', 'x y')
+            MinMax = collections.namedtuple('MinMax', 'min max')
+            return MinMax( Point( xMin, yMin ), Point( xMax, yMax ) )
 
         self.driverName = formatImage
         self._message = None
-        self._statusError = 0 # 0(None), 1(image), 2(request/tile)
+        self._statusError = 0 # 0(None), 1(image), 2(request/tile out image)
         try:
-            self.ds = gdal.Open( filepath, GA_ReadOnly )
+            self._ds = gdal.Open( filepath, GA_ReadOnly )
         except RuntimeError as e:
             self._message = f"Open: {str(e)}"
             self._statusError = 1
-            self.ds = None
+            self._ds = None
             return
+
         if not hasGeorefence():
-            self._message = f"Missing georeference"
-            self._statusError = 1
-            self.ds = None
+            self._ds = None
             return
-        self.srsImage = osr.SpatialReference( self.ds.GetProjectionRef() )
-        self.srsTile = osr.SpatialReference()
-        self.srsTile.ImportFromProj4( self.SRS_WGS84 )
-        self.bbox = getBBox()
-        if self.bbox is None:
-            self.ds = None
+
+        self.pointsImage = getMinMaxPoint()
+        if self.pointsImage is None:
+            self._ds = None
 
     def __del__(self):
-        self.ds = None
-
-    def _createGeometry(self, xMin, yMin, xMax, yMax):
-        ring = ogr.Geometry( ogr.wkbLinearRing )
-        ring.AddPoint( xMin, yMin ) # Left  Bottom 
-        ring.AddPoint( xMax, yMin ) # Right Bottom
-        ring.AddPoint( xMax, yMax ) # Right Upper
-        ring.AddPoint( xMin, yMax ) # Left Upper
-        ring.AddPoint( xMin, yMin )
-        poly = ogr.Geometry(ogr.wkbPolygon)
-        poly.AddGeometry(ring)
-        return poly
+        self._ds = None
 
     def _createImage(self, filepath, zoom, xtile, ytile):
         def num2deg(z, x, y):
@@ -109,16 +101,16 @@ class TilesRaster():
             vlat = math.degrees(lat_rad)
             return Point( vlong, vlat )
 
-        def getDatasetTile(pointMin, pointMax, geomTile):
+        def getDatasetTile(tile):
             # Warp
             args = {
                 'destNameOrDestDS': '',
-                'srcDSOrSrcDSTab': self.ds,
+                'srcDSOrSrcDSTab': self._ds,
                 'format': 'mem',
                 'dstSRS': self.SRS_PSEUDO_MERCATOR,
                 'resampleAlg': gdal.GRA_NearestNeighbour,
                 'height': self.TILE_SIZE, 'width': self.TILE_SIZE,
-                'outputBounds': [ pointMin.long, pointMin.lat, pointMax.long, pointMax.lat ],
+                'outputBounds': [ tile.min.x, tile.min.y, tile.max.x, tile.max.y ],
                 'outputBoundsSRS': self.SRS_WGS84
             }
             try:
@@ -129,22 +121,30 @@ class TilesRaster():
                 ds = None
             return ds
 
-        if self.ds is None:
-            return False
-        Point = collections.namedtuple('Point', 'long lat' )
+        if self._ds is None: return False
+
+        Point = collections.namedtuple('Point', 'x y')
+        MinMax = collections.namedtuple('MinMax', 'min max')
         pointMin = num2deg( zoom, xtile, ytile+1 )
         pointMax = num2deg( zoom, xtile+1, ytile )
-        geom = self._createGeometry( pointMin.long, pointMin.lat, pointMax.long, pointMax.lat )
-        if not self.bbox.Intersects( geom ):
-            self._message = f"Tile outside image"
-            self._statusError = 2
-            return False
-        ds = getDatasetTile( pointMin, pointMax, geom )
+        tile = MinMax( pointMin, pointMax )
+
+        # Image: Left, Right, Bottom and Upper
+        if self.pointsImage.max.x < tile.min.x or \
+           self.pointsImage.min.x > tile.max.x or \
+           self.pointsImage.max.y < tile.min.y or \
+           self.pointsImage.min.y > tile.max.y:
+           #
+           self._message = f"Tile out of image"
+           self._statusError = 2
+           return False
+
+        ds = getDatasetTile( tile )
         if ds is None:
             return False
         _ds = gdal.GetDriverByName( self.driverName ).CreateCopy( filepath, ds )
         _ds, ds = 2 * [None]
-        aux_xml = "{}{}.aux.xml".format( *os.path.splitext( filepath) )
+        aux_xml = "{}.aux.xml".format( filepath )
         if os.path.exists( aux_xml ):
             os.remove( aux_xml )
         self._statusError = 0
