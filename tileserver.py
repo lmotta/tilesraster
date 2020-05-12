@@ -40,7 +40,7 @@ def tilezxy(k, z, x, y):
 
     if not k in catalogRaster:
         msg = f"Missing image in Database(K = {k})"
-        return responseError( msg, 400 )
+        return responseError( msg, 500 )
 
     tilesraster = catalogRaster[ k ]['tilesraster']
     if tilesraster is None:
