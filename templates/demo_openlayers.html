@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.3.1/css/ol.css" type="text/css">
+    <style>
+      .map {
+        height: 400px;
+        width: 100%;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.3.1/build/ol.js"></script>
+    <title>OpenLayers example</title>
+  </head>
+  <body>
+    <h2>My Map</h2>
+    <div id="map" class="map"></div>
+    <script type="text/javascript">
+      osm = new ol.source.OSM()
+      xyz13166 = new ol.source.XYZ( { url: 'http://34.212.21.23:8080/tile/13166/{z}/{x}/{y}'} );
+      xyz15293 = new ol.source.XYZ( { url: 'http://34.212.21.23:8080/tile/15293/{z}/{x}/{y}'} );
+       var map = new ol.Map({
+        target: 'map',
+        layers: [
+          new ol.layer.Tile( { source: osm } ),
+          new ol.layer.Tile( { source: xyz13166 } ),
+          new ol.layer.Tile( { source: xyz15293 } )
+        ],
+        view: new ol.View({
+          center: ol.proj.fromLonLat([-64.73, -12.0]),
+          zoom: 7
+        })
+      });
+    </script>
+  </body>
+</html> 

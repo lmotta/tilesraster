@@ -1,6 +1,6 @@
-import sys, os
+import sys, os, functools
 
-from flask import Flask, Response
+from flask import Flask, Response, render_template
 
 from tilesraster import TilesRaster
 
@@ -8,6 +8,7 @@ from tilesraster import TilesRaster
 app = Flask(__name__)
 
 IMAGES_DIR = '/home/lmotta/data/db/images/landsat'
+# IMAGES_DIR = '/home/ubuntu/data/images'
 STATUS_HTTP_TILES_RASTER = {
     0: 200, # OK
     1: 500, # Internal Server Error
@@ -37,16 +38,22 @@ def getResponseTilesRaster(itemCatalog, z, x, y):
         return responseError( itemCatalog['tilesraster'].message, status )
     return Response( data, mimetype='image/png' )
 
+@app.route('/demo')
+def demo():
+    return render_template('demo_leaflet.html')
+
 @app.route('/')
 def index():
     return responseError("Need Paths: .../tile/k/z/x/y OR .../tile/k/q", 400)
 
-@app.route("/tile/<k>/<z>/<x>/<y>")
+@app.route('/tile/<k>/<z>/<x>/<y>')
+@functools.lru_cache(maxsize=1024)
 def tilezxy(k, z, x, y):
     # Check Valid arguments
     return getResponseTilesRaster( catalogRaster[ k ], int(z), int(x), int(y) )
 
-@app.route("/tile/<k>/<q>")
+@app.route('/tile/<k>/<q>')
+@functools.lru_cache(maxsize=1024)
 def tileq(k, q):
     # Check Valid arguments
     z, x, y = TilesRaster.quadKey2tile( q  )

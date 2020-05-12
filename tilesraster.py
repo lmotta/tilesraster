@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import os, math, collections, functools
+import os, math, collections
 
 from osgeo import gdal, osr
 from osgeo.gdalconst import GA_ReadOnly
@@ -11,26 +11,29 @@ class TilesRaster():
     SRS_WGS84 = '+proj=longlat +datum=WGS84 +no_defs'
     SRS_PSEUDO_MERCATOR = '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs'
     TILE_SIZE = 256
+    OPERATION_QUADKEY2TILE = {
+        '0': lambda xtile, ytile, mask : ( xtile, ytile ),
+        '1': lambda xtile, ytile, mask : ( xtile | mask, ytile ),
+        '2': lambda xtile, ytile, mask : ( xtile, ytile | mask ),
+        '3': lambda xtile, ytile, mask : ( xtile | mask, ytile | mask )
+    }
     @staticmethod
     def quadKey2tile(quadKey):
         """
-        Adaptation from 'https://github.com/mapbox/mercantile'
+        Adaptation from 'https://github.com/mapbox/mercantile/blob/4cd0c36df219496a897224242ad4d46ce2815c11/mercantile/__init__.py#L390'
         """
         Tile = collections.namedtuple("Tile", 'z x y')
         if not bool(quadKey):
             return Tile(0,0,0)
         xtile, ytile = 0, 0
-        for i, digit in enumerate( reversed(quadKey) ):
+        if not bool(quadKey):
+            return Tile(0,0,0)
+        xtile, ytile = 0, 0
+        for i, d in enumerate( reversed(quadKey) ):
             mask = 1 << i
-            if digit == '1':
-                xtile = xtile | mask
-            elif digit == '2':
-                ytile = ytile | mask
-            elif digit == '3':
-                xtile = xtile | mask
-                ytile = ytile | mask
-            elif digit != '0':
-                raise Exception(f"Unexpected quadkey digit: {digit}")
+            if not d in TilesRaster.OPERATION_QUADKEY2TILE:
+                raise Exception(f"Invalid quadkey '{quadKey}': Digit '{d}' position '{i}'")
+            ( xtile, ytile ) = TilesRaster.OPERATION_QUADKEY2TILE[ d ]( xtile, ytile, mask )
         return Tile( i+1, xtile, ytile )
 
     def __init__(self, filepath, formatImage):
@@ -108,7 +111,7 @@ class TilesRaster():
                 'srcDSOrSrcDSTab': self._ds,
                 'format': 'mem',
                 'dstSRS': self.SRS_PSEUDO_MERCATOR,
-                'resampleAlg': gdal.GRA_NearestNeighbour,
+                'resampleAlg': gdal.GRA_Bilinear,
                 'height': self.TILE_SIZE, 'width': self.TILE_SIZE,
                 'outputBounds': [ tile.min.x, tile.min.y, tile.max.x, tile.max.y ],
                 'outputBoundsSRS': self.SRS_WGS84
@@ -159,7 +162,6 @@ class TilesRaster():
     def saveTile(self, filepath, zoom, xtile, ytile):
         return self._createImage( filepath, zoom, xtile, ytile )
 
-    @functools.lru_cache(maxsize=1024)
     def bytesTile(self, zoom, xtile, ytile):
         def getBytesFromTempfile():
             # https://lists.osgeo.org/pipermail/gdal-dev/2016-August/045030.html
