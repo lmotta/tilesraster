@@ -23,41 +23,43 @@ catalogRaster = {
 def responseError(message, status):
     return Response( f"{message}\n", status, mimetype='text/plain' )
 
-def getResponseTilesRaster(itemCatalog, z, x, y):
-    if itemCatalog['tilesraster'] is None:
-        filepath = os.path.join( IMAGES_DIR, itemCatalog['file'] )
-        itemCatalog['tilesraster'] = TilesRaster( filepath, 'PNG')
-        # Check image error
-        if itemCatalog['tilesraster'].status_error:
-            status = STATUS_HTTP_TILES_RASTER[ itemCatalog['tilesraster'].status_error ]
-            return responseError( itemCatalog['tilesraster'].message, status )
-    # Check tile error
-    data = itemCatalog['tilesraster'].bytesTile( z, x, y )
-    if itemCatalog['tilesraster'].status_error:
-        status = STATUS_HTTP_TILES_RASTER[ itemCatalog['tilesraster'].status_error ]
-        return responseError( itemCatalog['tilesraster'].message, status )
-    return Response( data, mimetype='image/png' )
-
 @app.route('/demo')
 def demo():
     return render_template('demo_leaflet.html')
 
 @app.route('/')
 def index():
-    return responseError("Need Paths: .../tile/k/z/x/y OR .../tile/k/q", 400)
+    return responseError("Need Paths: .../tile/k/z/x/y", 400)
 
 @app.route('/tile/<k>/<z>/<x>/<y>')
 @functools.lru_cache(maxsize=1024)
 def tilezxy(k, z, x, y):
-    # Check Valid arguments
-    return getResponseTilesRaster( catalogRaster[ k ], int(z), int(x), int(y) )
+    def error(tilesraster):
+        status = STATUS_HTTP_TILES_RASTER[ tilesraster.status_error ]
+        return responseError( tilesraster.message, status )
 
-@app.route('/tile/<k>/<q>')
-@functools.lru_cache(maxsize=1024)
-def tileq(k, q):
-    # Check Valid arguments
-    z, x, y = TilesRaster.quadKey2tile( q  )
-    return getResponseTilesRaster( catalogRaster[ k ], z, x, y )
+    if not k in catalogRaster:
+        msg = f"Missing image in Database(K = {k})"
+        return responseError( msg, 400 )
+
+    tilesraster = catalogRaster[ k ]['tilesraster']
+    if tilesraster is None:
+        filepath = os.path.join( IMAGES_DIR, catalogRaster[ k ]['file'] )
+        tilesraster = TilesRaster( filepath, 'PNG')
+        # Check image error
+        if tilesraster.status_error:
+            return error( tilesraster )
+        catalogRaster[ k ]['tilesraster'] = tilesraster
+
+    if not z.isdigit() or not x.isdigit() or not y.isdigit():
+        msg = f"Parameters 'z/x/y' need be a integer number"
+        return responseError( msg, 400 )
+
+    data = tilesraster.bytesTile( int( z ), int( x), int( y ) )
+    if tilesraster.status_error:
+        return error( tilesraster )
+    return Response( data, mimetype='image/png' )
+
 
 
 if __name__ == '__main__':

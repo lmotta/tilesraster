@@ -11,31 +11,6 @@ class TilesRaster():
     SRS_WGS84 = '+proj=longlat +datum=WGS84 +no_defs'
     SRS_PSEUDO_MERCATOR = '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs'
     TILE_SIZE = 256
-    OPERATION_QUADKEY2TILE = {
-        '0': lambda xtile, ytile, mask : ( xtile, ytile ),
-        '1': lambda xtile, ytile, mask : ( xtile | mask, ytile ),
-        '2': lambda xtile, ytile, mask : ( xtile, ytile | mask ),
-        '3': lambda xtile, ytile, mask : ( xtile | mask, ytile | mask )
-    }
-    @staticmethod
-    def quadKey2tile(quadKey):
-        """
-        Adaptation from 'https://github.com/mapbox/mercantile/blob/4cd0c36df219496a897224242ad4d46ce2815c11/mercantile/__init__.py#L390'
-        """
-        Tile = collections.namedtuple("Tile", 'z x y')
-        if not bool(quadKey):
-            return Tile(0,0,0)
-        xtile, ytile = 0, 0
-        if not bool(quadKey):
-            return Tile(0,0,0)
-        xtile, ytile = 0, 0
-        for i, d in enumerate( reversed(quadKey) ):
-            mask = 1 << i
-            if not d in TilesRaster.OPERATION_QUADKEY2TILE:
-                raise Exception(f"Invalid quadkey '{quadKey}': Digit '{d}' position '{i}'")
-            ( xtile, ytile ) = TilesRaster.OPERATION_QUADKEY2TILE[ d ]( xtile, ytile, mask )
-        return Tile( i+1, xtile, ytile )
-
     def __init__(self, filepath, formatImage):
         def hasGeorefence():
             if ( 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 ) == self._ds.GetGeoTransform():
