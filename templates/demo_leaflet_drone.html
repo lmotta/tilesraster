@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+	<title>Image drone example</title>
+
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js" integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew==" crossorigin=""></script>
+	
+</head>
+<body>
+
+<div id="mapid" style="width: 1000px; height: 800px;"></div>
+<script>
+
+	var map = L.map('mapid').setView([-9.84, -67.59], 12);
+
+	L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+		maxZoom: 18,
+		attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+			'<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+			'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+		id: 'mapbox/streets-v11',
+		tileSize: 512,
+		zoomOffset: -1
+	}).addTo(map);
+	
+    var geojsonFeature = {
+        "type": "Feature",
+        "properties": {
+            "name": "Drone",
+        },
+        "geometry": {
+    "type":"MultiPolygon",
+        "coordinates":[ [ [
+                        [ -67.70784740997415, -9.832178003456116 ],
+                        [ -67.707847705772124, -9.832101840565233 ],
+                        [ -67.707770910027975, -9.832101547197329 ],
+                        [ -67.707770614212421, -9.832177710085894 ],
+                        [ -67.70784740997415, -9.832178003456116 ] 
+                        ] ], 
+                        [ [ 
+                        [ -67.70784740997415, -9.832178003456116 ],
+                        [ -67.710755614838902, -9.834778679685314 ],
+                        [ -67.712598435574719, -9.834861864359244 ],
+                        [ -67.713367874021657, -9.834483971879129 ],
+                        [ -67.71544843785918, -9.832663939570448 ],
+                        [ -67.723932814907243, -9.823099328327858 ],
+                        [ -67.725242397271273, -9.822037958012807 ],
+                        [ -67.725629572560607, -9.821201605202255 ],
+                        [ -67.72948407737583, -9.817331690327276 ],
+                        [ -67.729261830132245, -9.815198245311649 ],
+                        [ -67.725360268212199, -9.81129919579231 ],
+                        [ -67.721537923183163, -9.806791094250165 ],
+                        [ -67.719930294984636, -9.805490233366765 ],
+                        [ -67.720008253765656, -9.805185869690778 ],
+                        [ -67.717559466765906, -9.802967850874921 ],
+                        [ -67.717637719411158, -9.802587324582738 ],
+                        [ -67.716261372430679, -9.801058831274812 ],
+                        [ -67.714042418651559, -9.798993991374493 ],
+                        [ -67.71228040079987, -9.797921009782865 ],
+                        [ -67.710898217079034, -9.797915762721045 ],
+                        [ -67.708975868248345, -9.79859393349574 ],
+                        [ -67.703039518240715, -9.804664419827535 ],
+                        [ -67.701032915214185, -9.807246314662539 ],
+                        [ -67.70102609300352, -9.808998058887724 ],
+                        [ -67.705311562431675, -9.812822653546082 ],
+                        [ -67.701301209623054, -9.817224815742632 ],
+                        [ -67.701447373068774, -9.819129473518016 ],
+                        [ -67.702978480237249, -9.820353963371096 ],
+                        [ -67.701434902743912, -9.82232830894929 ],
+                        [ -67.701731980185698, -9.824919020217223 ],
+                        [ -67.702957122418667, -9.825837683819934 ],
+                        [ -67.702878251024075, -9.826370528902356 ],
+                        [ -67.703642041474595, -9.827439750228667 ],
+                        [ -67.705479483036044, -9.828893899340224 ],
+                        [ -67.705170525417003, -9.82934970093533 ],
+                        [ -67.705934329498916, -9.830418918725925 ],
+                        [ -67.707924797296684, -9.832025971022064 ],
+                        [ -67.70784740997415, -9.832178003456116 ] ] ] ]
+        }
+    };
+   L.geoJSON(geojsonFeature).addTo(map);	
+   
+    var imgDrone = 'http://34.212.21.23:8080/tile/drone/{z}/{x}/{y}'
+    L.tileLayer(imgDrone, { maxZoom: 22, attribution: 'drone', id: 'drone' }).addTo(map)
+
+</script>
+
+</body>
+</html>

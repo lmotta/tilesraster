@@ -1,4 +1,4 @@
-import sys, os, functools
+import os, functools
 
 from flask import Flask, Response, render_template
 
@@ -7,18 +7,22 @@ from tilesraster import TilesRaster
 
 app = Flask(__name__)
 
-IMAGES_DIR = '/home/lmotta/data/db/images/landsat'
-# IMAGES_DIR = '/home/ubuntu/data/images'
 STATUS_HTTP_TILES_RASTER = {
     0: 200, # OK
     1: 500, # Internal Server Error
     2: 400  # Bad Request
 }
 
+IMAGES_DIR = '/vsis3/lmottadata/'
 catalogRaster = {
-    '15293': { 'file': 'LC82320682015293LGN00_r6g5b4.tif', 'tilesraster': None },
-    '13166': { 'file': 'LC82330682013166LGN00_r6g5b4.tif', 'tilesraster': None }
+    'drone': { 'file': 'drone.tif', 'tilesraster': None }
 }
+
+#IMAGES_DIR = '/home/lmotta/data/db/images/landsat'
+#catalogRaster = {
+    #'15293': { 'file': 'LC82320682015293LGN00_r6g5b4.tif', 'tilesraster': None },
+    #'13166': { 'file': 'LC82330682013166LGN00_r6g5b4.tif', 'tilesraster': None }
+#}
 
 def responseError(message, status):
     return Response( f"{message}\n", status, mimetype='text/plain' )
@@ -59,7 +63,6 @@ def tilezxy(k, z, x, y):
     if tilesraster.status_error:
         return error( tilesraster )
     return Response( data, mimetype='image/png' )
-
 
 
 if __name__ == '__main__':
