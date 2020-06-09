@@ -84,8 +84,8 @@
     };
    L.geoJSON(geojsonFeature).addTo(map);	
    
-    var imgDrone = 'http://34.212.21.23:8080/tile/drone/{z}/{x}/{y}'
-    L.tileLayer(imgDrone, { maxZoom: 22, attribution: 'drone', id: 'drone' }).addTo(map)
+    var imgDrone = 'http://localhost:8080/tile/ac/{z}/{x}/{y}'
+    L.tileLayer(imgDrone, { maxZoom: 22, attribution: 'Done image', id: 'ac' }).addTo(map)
 
 </script>
 
