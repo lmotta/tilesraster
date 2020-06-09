@@ -2,7 +2,7 @@
 #
 """
 ***********************************************************************************
-Name                 : Tiles raster                                               *
+Name                 : Tile raster                                               *
 Description          : Create a tile(PNG) from parameters: zoom, xtile, ytile.    *
 Date                 : June, 2020                                                 *
 copyright            : (C) 2020 by Luiz Motta                                     *
@@ -49,7 +49,7 @@ from osgeo.gdalconst import GA_ReadOnly
 gdal.AllRegister()
 gdal.UseExceptions()
 
-class TilesRaster():
+class TileRaster():
     SRS_WGS84 = '+proj=longlat +datum=WGS84 +no_defs'
     SRS_PSEUDO_MERCATOR = '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs'
     TILE_SIZE = 256
